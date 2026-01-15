@@ -10,9 +10,7 @@
 - Keywords 5-6 keywords
 
 ## INTRODUCTION
-根据preliminary report我们有研究问题和研究目标
-Our research problem is how to quantitatively evaluate the performance of closed-ended and open-ended questions, thereby responding to patients' fundamental demands for "understanding medical images", while ensuring clinical availability and safety boundaries.
-
+From preliminary report,oOur research problem is how to quantitatively evaluate the performance of closed-ended and open-ended questions, thereby responding to patients' fundamental demands for "understanding medical images", while ensuring clinical availability and safety boundaries.
 Based on the research problem, we have proposed research questions and objectives in two aspects: closed-end performance comparison, open-end expression and safety.
 
 ⚫ RQ1: Which model, baseline or VLM, performs better in answering closed-ended questions about radiology images? How big is the gap between the two models?
@@ -94,11 +92,20 @@ LSTM是一种循环神经网络（RNN），用于处理序列数据，比如文�
 #### **2.3 Van Sonsbeek模型**（CLIP + GPT-2 + Mapping Network）
 
 ## RESULTS
+
 ### generative model
 首先是训sonsbeek的训练过程的results，可以看到早期的loss曲线快速下降,最显著的特征是epoch0到epoch1的垂直下降，这完全符合sonsbeek等人架构的预期，由于visionEncoder(clip)和languistic model（gpt-2）都是预训练好并且被冻结的，他们已经具备了非常强的特征提取和语言生成能力，模型不需要从0开始旭熙，mapping network只需要学习一个简单的线性变化来对齐视觉和语言，因此模型在初期训练能迅速找到最优解的大致方向。
 从ecpoch5开始，曲线进入plateau，loss稳定在0.3左右，并且线条十分平滑，没有剧烈震荡，这个平滑的曲线恰好说明了lr=1e-4和优化器adamW设置得比较合适，没有出现梯度爆炸和震荡。这种loss曲线过早平滑也暗示了vqa-rad数据集比较小，模型能很快记住训练集中的所有简单映射规则，并且，mapping network是一个简单mlp，容量有限，并且主干被冻结了，很难在这种不解冻主干的情况下挖掘出更深层的语义规律。
 总的来说，这张图说明了我们的代码是可行的，并且
 ![final_training_loss.png](../llm_results/final_training_loss.png)
+
+
+3.1.1 baseline 结果
+baseline训练集: 1,574个样本 (70%)验证集: 337个样本 (15%)测试集: 337个样本 (15%)。
+硬件信息为colab T4 GPU  系统 RAM 2.4 / 12.7 GB  GPU RAM 0.3 / 15.0 GB 磁盘 38.8 / 112.6 GB
+下表为其他关键超参数。
+3.1.2 
+
 ## DISCUSSION
 ## CONCLUSION
 ## ACKNOWLEDGEMENT
