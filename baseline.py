@@ -96,8 +96,8 @@ class MedVQADataset(Dataset):
 
         question = self.text_to_sequence(row['question'])
         label = torch.tensor(self.ans_to_id.get(row['answer'], 0), dtype=torch.long)
-        q_type = row['answer_type'] # 假设 CSV 中列名为 'answer_type'
-        
+        q_type = row['answer_type']  # 假设 CSV 中列名为 'answer_type'
+
         return image, question, label, q_type
 
 
@@ -121,7 +121,7 @@ train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 print(f"--- 数据加载器已就绪，共有 {len(train_loader)} 个 training batches && ---{len(val_dataset)}个 testing  batches")
 
-   
+
 # --- 第五步：模型初始化与训练 ---
 class MedVQA_ResNet_MLP(nn.Module):
     def __init__(self, num_classes, vocab_size):
@@ -149,22 +149,22 @@ class MedVQA_ResNet_MLP(nn.Module):
 class MedVQA_ResNet_LSTM(nn.Module):
     def __init__(self, num_classes, vocab_size, embed_dim=512, hidden_dim=512):
         super(MedVQA_ResNet_LSTM, self).__init__()
-        
+
         # 1. Image Encoder: ResNet50
         self.resnet = models.resnet50(weights=ResNet50_Weights.DEFAULT)
         self.vis_dim = self.resnet.fc.in_features
         self.resnet.fc = nn.Identity()  # 移除分类层，输出 2048 维特征
-        
+
         # 2. Text Encoder: LSTM
         self.embedding = nn.Embedding(vocab_size, embed_dim)
         self.lstm = nn.LSTM(
-            input_size=embed_dim, 
-            hidden_size=hidden_dim, 
-            num_layers=1, 
+            input_size=embed_dim,
+            hidden_size=hidden_dim,
+            num_layers=1,
             batch_first=True,
-            bidirectional=False # 如果需要更强能力，可设为True，但特征维度需*2
+            bidirectional=False  # 如果需要更强能力，可设为True，但特征维度需*2
         )
-        
+
         # 3. Fusion & Classifier
         self.mlp = nn.Sequential(
             nn.Linear(self.vis_dim + hidden_dim, 1024),
@@ -176,24 +176,26 @@ class MedVQA_ResNet_LSTM(nn.Module):
     def forward(self, images, questions):
         # 提取图像特征 [batch_size, 2048]
         img_feats = self.resnet(images)
-        
+
         # 提取文本特征
         # questions shape: [batch_size, seq_len]
-        embedded = self.embedding(questions) # [batch_size, seq_len, embed_dim]
-        
+        embedded = self.embedding(questions)  # [batch_size, seq_len, embed_dim]
+
         # LSTM 输出说明:
         # output: 包含序列中每个时间步的特征
         # (h_n, c_n): h_n 是最后一个隐藏状态，代表整个句子的压缩语义
         _, (h_n, _) = self.lstm(embedded)
-        
+
         # 取最后一层 LSTM 的输出 [batch_size, hidden_dim]
-        txt_feats = h_n[-1] 
-        
+        txt_feats = h_n[-1]
+
         # 特征融合
         combined = torch.cat((img_feats, txt_feats), dim=1)
-        
+
         # 输出分类概率
         return self.mlp(combined)
+
+
 print("--- 权重下载完成，开始初始化模型 ---")
 # model = MedVQA_ResNet_MLP(num_classes=num_classes, vocab_size=len(vocab)).to(device)
 model = MedVQA_ResNet_LSTM(num_classes=num_classes, vocab_size=len(vocab)).to(device)
@@ -213,16 +215,16 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
         running_loss = 0.0
         correct_train = 0
         total_train = 0
-        
-        for imgs, ques, lbls, _ in train_loader: # 注意：这里解包增加了 q_type 的占位符 _
+
+        for imgs, ques, lbls, _ in train_loader:  # 注意：这里解包增加了 q_type 的占位符 _
             imgs, ques, lbls = imgs.to(device), ques.to(device), lbls.to(device)
-            
+
             optimizer.zero_grad()
             outputs = model(imgs, ques)
             loss = criterion(outputs, lbls)
             loss.backward()
             optimizer.step()
-            
+
             running_loss += loss.item()
             _, predicted = torch.max(outputs.data, 1)
             total_train += lbls.size(0)
@@ -235,9 +237,9 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
         model.eval()
         correct_val = 0
         total_val = 0
-        
+
         # 初始化分类统计字典
-        type_stats = {'CLOSED': {'correct': 0, 'total': 0}, 
+        type_stats = {'CLOSED': {'correct': 0, 'total': 0},
                       'OPEN': {'correct': 0, 'total': 0}}
 
         with torch.no_grad():
@@ -245,10 +247,10 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
                 imgs, ques, lbls = imgs.to(device), ques.to(device), lbls.to(device)
                 outputs = model(imgs, ques)
                 _, predicted = torch.max(outputs.data, 1)
-                
+
                 total_val += lbls.size(0)
                 correct_val += (predicted == lbls).sum().item()
-                
+
                 # 逐个样本进行类型归类
                 for i in range(len(lbls)):
                     q_type = q_types[i]
@@ -257,19 +259,19 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
                         type_stats[q_type]['total'] += 1
                         if is_correct:
                             type_stats[q_type]['correct'] += 1
-        
+
         val_acc = 100 * correct_val / total_val
         history['train_loss'].append(epoch_loss)
         history['val_acc'].append(val_acc)
         # 将 train_acc 存入 history
         history['train_acc'].append(train_acc)
-        last_type_stats = type_stats # 记录最后一轮统计
-        
+        last_type_stats = type_stats  # 记录最后一轮统计
+
         # 打印实时进度
-        print(f"Epoch [{epoch+1}/{epochs}]")
+        print(f"Epoch [{epoch + 1}/{epochs}]")
         print(f"  Train Loss: {epoch_loss:.4f} | Train Acc: {train_acc:.2f}%")
         print(f"  Val Acc: {val_acc:.2f}%")
-        
+
         # 仅在最后一个 Epoch 打印详细的类型报告
         if epoch == epochs - 1:
             print("\n>>> Final Detailed Accuracy Analysis (Last Epoch):")
@@ -281,9 +283,10 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
 
     return history, last_type_stats
 
+
 # --- 重新调用训练 ---
 # 注意：确保你的 MedVQADataset 的 __getitem__ 返回了 4 个值 (img, ques, label, q_type)
-train_history, final_type_stats= train_and_validate(model, train_loader, val_loader, criterion, optimizer, epochs=30)
+train_history, final_type_stats = train_and_validate(model, train_loader, val_loader, criterion, optimizer, epochs=30)
 
 # --- 修改后的绘图部分 ---
 # plt.figure(figsize=(12, 5))
@@ -314,13 +317,14 @@ output_dir = 'baseline_vqa_results_output'
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
+
 # --- 2. 词汇表频率可视化 (基于 Step 2 的 Counter) ---
 def plot_vocab_frequency(csv_file, save_path):
     df = pd.read_csv(csv_file)
     counter = collections.Counter()
     for q in df['question']:
         counter.update(str(q).lower().split())
-    
+
     # 获取前 20 个最常见的单词
     most_common = counter.most_common(20)
     words = [item[0] for item in most_common]
@@ -338,12 +342,13 @@ def plot_vocab_frequency(csv_file, save_path):
     plt.close()
     print(f"--- 词汇频率图已保存至: {save_path}/vocab_frequency.png ---")
 
+
 # --- 3. 分类准确率可视化 (基于最后的 type_stats) ---
 def plot_type_accuracy(type_stats, save_path):
     types = []
     accs = []
     totals = []
-    
+
     for qt, data in type_stats.items():
         if data['total'] > 0:
             types.append(qt)
@@ -355,18 +360,19 @@ def plot_type_accuracy(type_stats, save_path):
     plt.ylim(0, 100)
     plt.title('Accuracy by Question Type (Last Epoch)')
     plt.ylabel('Accuracy (%)')
-    
+
     # 在柱状图上方标注具体百分比和样本数
     for i, bar in enumerate(bars):
         yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2, yval + 1, 
+        plt.text(bar.get_x() + bar.get_width() / 2, yval + 1,
                  f'{yval:.2f}%\n(n={totals[i]})', ha='center', va='bottom', fontweight='bold')
-    
+
     plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.savefig(os.path.join(save_path, 'type_accuracy_comparison.png'), dpi=300)
     plt.close()
     print(f"--- 分类准确率对比图已保存至: {save_path}/type_accuracy_comparison.png ---")
+
 
 # --- 4. 修改训练函数以返回 type_stats 并执行绘图 ---
 
