@@ -140,7 +140,7 @@ def evaluate_model(model, test_data, tokenizer, processor, device):
             output_ids = model.gpt2.generate(
                 inputs_embeds=inputs_embeds,
                 # max_new_tokens=15, # 答案通常不长
-                max_new_tokens=5, # 【修改这里】从 15 改为 5，只生成几个词
+                max_new_tokens=15, # 【修改这里】从 15 改为 5，只生成几个词
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id
             )
