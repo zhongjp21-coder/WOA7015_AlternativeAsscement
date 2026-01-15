@@ -87,7 +87,7 @@ def load_vqa_rad_data(csv_path, image_folder):
     # 如果你的列名是 'image_id' 或其他，请相应修改
     cleaned_data = []
     for idx, row in df.iterrows():
-        img_name = str(row.get('image_name', row.get('image', ''))) # 尝试获取图片名
+        img_name = str(row.get('image_id', row.get('image', ''))) # 尝试获取图片名
         question = str(row.get('question', ''))
         answer = str(row.get('answer', ''))
         
@@ -139,7 +139,8 @@ def evaluate_model(model, test_data, tokenizer, processor, device):
             
             output_ids = model.gpt2.generate(
                 inputs_embeds=inputs_embeds,
-                max_new_tokens=15, # 答案通常不长
+                # max_new_tokens=15, # 答案通常不长
+                max_new_tokens=5, # 【修改这里】从 15 改为 5，只生成几个词
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id
             )
@@ -151,6 +152,13 @@ def evaluate_model(model, test_data, tokenizer, processor, device):
         # 但GPT2 decode通常是整个序列，如果只含新token则直接用
         pred_answer = generated_text.strip().lower()
         
+        # 【修改点 3】在这里插入一句 print，看看模型到底生成了什么鬼东西
+        # 这样你就能知道为什么没匹配上了
+        if i < 5: # 只打印前5个避免刷屏
+            print(f"\n--- Debug Sample {i} ---")
+            print(f"Raw Output: {generated_text}") # 看看原始输出包含什么
+            print(f"Cleaned Pred: [{pred_answer}] vs Truth: [{true_answer}]")
+            
         # 4. 计算指标
         # BLEU需要分词列表
         ref_tokens = true_answer.split()
@@ -191,20 +199,25 @@ def evaluate_model(model, test_data, tokenizer, processor, device):
 def run_experiment():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
-    
+    output_dir = "./llm_results"
     # --- 配置路径 (请修改这里) ---
-    csv_file_path = "VQA_RAD Dataset Public.csv" # 指向你的CSV文件
+    train_csv_file_path = "train_split.csv" # 指向你的CSV文件
+    test_csv_file_path = "val_split.csv" # 指向你的CSV文件
     image_folder_path = "VQA_RAD Image Folder"   # 指向你的图片文件夹
     
     # 1. 加载与分割数据
     # 根据Preliminary Report ，我们需要划分 80% Train, 20% Test
-    full_data = load_vqa_rad_data(csv_file_path, image_folder_path)
-    if len(full_data) == 0:
-        print("Error: No data loaded. Check your paths and CSV column names.")
-        return
+    train_data = load_vqa_rad_data(train_csv_file_path, image_folder_path)
+    test_data = load_vqa_rad_data(test_csv_file_path, image_folder_path)
+   
+    # if len(full_data) == 0:
+    #     print("Error: No data loaded. Check your paths and CSV column names.")
+    #     return
 
+    # full_data = full_test_data[:20]
     
-    train_data, test_data = train_test_split(full_data, test_size=0.2, random_state=42)
+    
+    # train_data, test_data = train_test_split(full_test_data, test_size=0.2, random_state=42)
     print(f"Data Split: {len(train_data)} Train, {len(test_data)} Test")
 
     # 2. 初始化模型
@@ -223,7 +236,8 @@ def run_experiment():
     loss_history = []
     
     # 演示只跑 5 个 Epoch，正式跑请改为 30
-    for epoch in range(5): 
+    # for epoch in range(5): 
+    for epoch in range(30): 
         total_loss = 0
         for batch in train_loader:
             pixel_values, input_ids, labels = [x.to(device) for x in batch]
@@ -243,13 +257,15 @@ def run_experiment():
     # 保存Loss图
     plt.plot(loss_history)
     plt.title("Training Loss Trend")
-    plt.savefig("final_training_loss.png")
+    save_plot_path = os.path.join(output_dir, "final_training_loss.png")
+    plt.savefig(save_plot_path)
 
     # 4. 评估 (生成Results表格数据)
     results_df = evaluate_model(model, test_data, tokenizer, processor, device)
     
     # 5. 保存结果到文件
-    results_df.to_excel("final_report_results.xlsx", index=False)
+    save_excel_path = os.path.join(output_dir, "final_report_results.xlsx")
+    results_df.to_excel(save_excel_path, index=False)
     print("\nDetailed results saved to 'final_report_results.xlsx'")
     
     # 6. 打印几个例子用于 Qualitative Analysis
