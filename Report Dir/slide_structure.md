@@ -29,8 +29,8 @@ The batch size of the model is 16, and LR is dynamically adjusted using ReduceLR
 [90s]The following are the core results of this research.
 First, let's look at the baseline model. Its training accuracy rate reaches 78%, and the training loss is as low as 0.66, indicating that the model has basic fitting ability on the training data and the configuration is reasonable.
 However, the accuracy rate of the validation set is only 44%, and test set is as low as 33%. The gap between the training and test accuracy rates is as high as 44%, indicating a serious overfitting phenomenon.
-The F1 score, precision rate, recall rate are also generally low, at 13.64%, 14.54% and 13.27% respectively, reflecting the significant impact of category imbalance on prediction quality.
-From the perspective of problem types, the model has the highest accuracy rate on closed-end problems, reaching 48%, but the comprehensive evaluation index is still at a low level, indicating that it only performs slightly better on simple judgment problems, and its overall generalization ability is insufficient.
+The F1 score, precision rate, recall rate are also generally low, around 14%, reflecting the significant impact of category imbalance on prediction quality.
+From the perspective of question types, the model has higher accuracy rate on closed-end questions, reaching 48%, but the comprehensive evaluation index is still at a low level, indicating that it only performs slightly better on simple judgment questions, and its overall generalization ability is insufficient.
 
 ## results: generative model
 
@@ -38,6 +38,13 @@ From the perspective of problem types, the model has the highest accuracy rate o
 
 
 ## conclusion
+Finally, we draw the following conclusion: In terms of the issue of closure, even with limited training data, the overall performance of the generative visual language model is superior to that of the CNN-LSTM baseline model. The pre-trained visual and language features can more effectively help the model learn the association between medical images and text problems, while the model trained from scratch has obvious deficiencies in generalization ability.
+In terms of open-ended questions, the evaluation metrics based on lexical matching cannot fully reflect the model's comprehension ability. Many low-score word examples are not due to medical factual errors, but rather because the predicted answers and reference answers differ in wording but have the same semantics.
+Most errors are related to incomplete expression or word substitution rather than generating non-existent diseases or imaging findings.
+Overall, relying solely on automatic evaluation metrics may underestimate the actual performance of generative models in medical visual question answering tasks.
+Therefore, when evaluating the performance and security of a model, qualitative analysis must be combined to gain a more comprehensive understanding of the reliability of the model's output.
+Future research could consider using larger-scale medical datasets and evaluation methods that are more in line with the actual clinical application scenarios to further enhance the practical applicability of such models.
+
 
 
 
