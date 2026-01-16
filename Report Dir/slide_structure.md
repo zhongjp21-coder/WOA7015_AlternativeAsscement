@@ -1,10 +1,52 @@
 # Slide scripts for presentation
-## introduction - 1
-#### Slide 1:
-## problems
+[15s]hi, everyone. Today our presentation topic is A Comparative Study of CNN Baseline Classifier and LLM-Based Model for Medical Visual Question Answering.
+## introduction: problems
+[32s]It is  easy for patients and clinicians to access medical images now. However, how to effectively interpret these image information to support diagnosis and decision-making has become a key demand.
+Visual question answering (VQA) has demonstrated potential in general fields, but when applied to the field of radiology, it faces unique challenges such as clinical reliability and safety.
 ## ro&&rq
-## baseline model
-## generative model
+[50s ]Against this backdrop, we have raised two core research questions: First, Which model performs better in the baseline model and the VLM model?
+What is the expression quality  and the risk of hallucinationis  of the VLM model in open-ended questions.
+To address these questions, we have set clear research goals: to evaluate the results of closed-end questions through overall accuracy, macro F1;
+Meanwhile,  to evaluate the expression quality of open-ended questions by language similarity indicators such as BLEU and ROUGE-L.
+## methods: baseline model
+[45s]Next, let's introduce the research methods in detail.
+First  is the construction of the baseline model, It's divided into four core modules.
+In the data preprocessing stage, After cleaning data, We divided the data  into the training set, validation set and test set at a percentage of 70%, 15% and 15% respectively.
+Afterwards, we constructed a vocabulary list based on the question texts in the training set. Meanwhile, we built an answer mapping table based on the answers in the training set, converting the text answers into classification labels.
+
+[43s]During the data Transformation  and loading process, images are resized and standardized, while text is processed with a maximum sequence length of 25 as the standard, and then mapped to the corresponding ID. Eventually, all are converted into  tensors.
+Subsequently, a batch iterative data stream is constructed through DataLoader. Among them, the training set is shuffled  in order to prevent overfitting, while the validation set and test set remain in order for easy result tracking.
+
+[37s] The baseline model adopts the MedVQA_ResNet_LSTM dual-stream fusion architecture. ResNet50 is used to extract the advanced visual features of the image, and Embedding+LSTM is used to extract the semantic features of the text. Then, after concatenating the two types of features, MLP is used for nonlinear transformation, and finally we have the classification result.
+
+[45s]The training process is based on the PyTorch framework, adopts a training-validation iterative strategy, and also introduces an early stop mechanism.
+stage1 uses the training set to train the model, while stage2 uses the validation set to verify the model's accuracy and F1. At the same time, if there is no improvement in the validation loss for N consecutive cycles, the training is stopped to avoid overfitting.
+The batch size of the model is 16, and LR is dynamically adjusted using ReduceLROnPlateau.
+
+## methods: generative model
+## 
+## results: baseline model
+[90s]The following are the core results of this research.
+First, let's look at the baseline model. Its training accuracy rate reaches 78%, and the training loss is as low as 0.66, indicating that the model has basic fitting ability on the training data and the configuration is reasonable.
+However, the accuracy rate of the validation set is only 44%, and test set is as low as 33%. The gap between the training and test accuracy rates is as high as 44%, indicating a serious overfitting phenomenon.
+The F1 score, precision rate, recall rate are also generally low, at 13.64%, 14.54% and 13.27% respectively, reflecting the significant impact of category imbalance on prediction quality.
+From the perspective of problem types, the model has the highest accuracy rate on closed-end problems, reaching 48%, but the comprehensive evaluation index is still at a low level, indicating that it only performs slightly better on simple judgment problems, and its overall generalization ability is insufficient.
+
+## results: generative model
+
+## comparison
+
+
+## conclusion
+
+
+
+
+
+
+
+
+
 ⚡ Training Characteristics
 Parameter Efficiency: Only the mapping network is trained (~1% of parameters)
 Loss Calculation: Only text tokens contribute to loss; visual prefixes are masked
@@ -20,14 +62,6 @@ Medical Specificity: Considers clinical validity and semantic accuracy
 Benchmark Consistency: Follows Med-VQA domain standard practices
 
 Comprehensiveness: Multi-dimensional assessment of model capabilities
-## methods
-## results
-
-
-## comparison
-## conclusion
-
-
 
 # Generative Model Experimental Results Analysis
 Page 1: Training Performance and Overall Results
